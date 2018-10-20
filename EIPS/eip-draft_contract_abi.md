@@ -10,41 +10,33 @@ created: 2018-10-20
 
 ## Abstract
 
-TBA
+The Contract Application Binary Interface (ABI) is the standard way to interact with contracts in the Ethereum ecosystem, both from outside the blockchain and for contract-to-contract interaction.
 
 ## Specification
 
-Basic Design
-============
+### Basic Design
 
-The Contract Application Binary Interface (ABI) is the standard way to interact with contracts in the Ethereum ecosystem, both
-from outside the blockchain and for contract-to-contract interaction. Data is encoded according to its type,
+Data is encoded according to its type,
 as described in this specification.  The encoding is not self describing and thus requires a schema in order to decode.
 
 We assume the interface functions of a contract are strongly typed, known at compilation time and static. We assume that all contracts will have the interface definitions of any contracts they call available at compile-time.
 
 This specification does not address contracts whose interface is dynamic or otherwise known only at run-time.
 
-.. _abi_function_selector:
-
-Function Selector
-=================
+### Function Selector
 
 The first four bytes of the call data for a function call specifies the function to be called. It is the
 first (left, high-order in big-endian) four bytes of the Keccak-256 (SHA-3) hash of the signature of the function. The signature is defined as the canonical expression of the basic prototype without data location specifier, i.e.
 the function name with the parenthesised list of parameter types. Parameter types are split by a single comma - no spaces are used.
 
-.. note::
-    The return type of a function is not part of this signature. In :ref:`Solidity's function overloading <overload-function>` return types are not considered. The reason is to keep function call resolution context-independent.
-    The :ref:`JSON description of the ABI<abi_json>` however contains both inputs and outputs.
+Note:
+    The return type of a function is not part of this signature. In Solidity's function overloading return types are not considered. The reason is to keep function call resolution context-independent.
 
-Argument Encoding
-=================
+### Argument Encoding
 
 Starting from the fifth byte, the encoded arguments follow. This encoding is also used in other places, e.g. the return values and also event arguments are encoded in the same way, without the four bytes specifying the function.
 
-Types
-=====
+### Types
 
 The following elementary types exist:
 
@@ -86,32 +78,8 @@ Types can be combined to a tuple by enclosing them inside parentheses, separated
 
 It is possible to form tuples of tuples, arrays of tuples and so on.  It is also possible to form zero-tuples (where ``n == 0``).
 
-Mapping Solidity to ABI types
------------------------------
 
-Solidity supports all the types presented above with the same names with the
-exception of tuples. On the other hand, some Solidity types are not supported
-by the ABI.  The following table shows on the left column Solidity types that
-are not part of the ABI, and on the right column the ABI types that represent
-them.
-
-+-------------------------------+-----------------------------------------------------------------------------+
-|      Solidity                 |                                           ABI                               |
-+===============================+=============================================================================+
-|:ref:`address payable<address>`|``address``                                                                  |
-+-------------------------------+-----------------------------------------------------------------------------+
-|:ref:`contract<contracts>`     |``address``                                                                  |
-+-------------------------------+-----------------------------------------------------------------------------+
-|:ref:`enum<enums>`             |smallest ``uint`` type that is large enough to hold all values               |
-|                               |                                                                             |
-|                               |For example, an ``enum`` of 255 values or less is mapped to ``uint8`` and    |
-|                               |an ``enum`` of 256 values is mapped to ``uint16``.                           |
-+-------------------------------+-----------------------------------------------------------------------------+
-|:ref:`struct<structs>`         |``tuple``                                                                    |
-+-------------------------------+-----------------------------------------------------------------------------+
-
-Design Criteria for the Encoding
-================================
+### Design Criteria for the Encoding
 
 The encoding is designed to have the following properties, which are especially useful if some arguments are nested arrays:
 
@@ -120,8 +88,7 @@ The encoding is designed to have the following properties, which are especially 
   2. The data of a variable or array element is not interleaved with other data and it is relocatable, i.e. it only uses relative "addresses".
 
 
-Formal Specification of the Encoding
-====================================
+### Formal Specification of the Encoding
 
 We distinguish static and dynamic types. Static types are encoded in-place and dynamic types are encoded at a separately allocated location after the current block.
 
@@ -200,8 +167,7 @@ on the type of ``X`` being
 
 Note that for any ``X``, ``len(enc(X))`` is a multiple of 32.
 
-Function Selector and Argument Encoding
-=======================================
+### Function Selector and Argument Encoding
 
 All in all, a call to the function ``f`` with parameters ``a_1, ..., a_n`` is encoded as
 
@@ -213,8 +179,7 @@ and the return values ``v_1, ..., v_k`` of ``f`` are encoded as
 
 i.e. the values are combined into a tuple and encoded.
 
-Examples
-========
+### Examples
 
 Given the contract:
 
@@ -274,8 +239,7 @@ In total:
 
     0xa5643bf20000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000464617665000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000003
 
-Use of Dynamic Types
-====================
+### Use of Dynamic Types
 
 A call to a function with the signature ``f(uint,uint32[],bytes10,bytes)`` with values ``(0x123, [0x456, 0x789], "1234567890", "Hello, world!")`` is encoded in the following way:
 
@@ -413,10 +377,7 @@ Offset ``f`` points to the start of the content of the array ``[[1, 2], [3]]`` w
 
 Offset ``g`` points to the start of the content of the array ``["one", "two", "three"]`` which is line 10 (320 bytes); thus ``g = 0x0000000000000000000000000000000000000000000000000000000000000140``.
 
-.. _abi_events:
-
-Events
-======
+### Events
 
 Events are an abstraction of the Ethereum logging/event-watching protocol. Log entries provide the contract's address, a series of up to four topics and some arbitrary length binary data. Events leverage the existing function ABI in order to interpret this (together with an interface spec) as a properly typed structure.
 
@@ -429,9 +390,9 @@ In effect, a log entry using this ABI is described as:
 - ``topics[n]``: ``EVENT_INDEXED_ARGS[n - 1]`` (``EVENT_INDEXED_ARGS`` is the series of ``EVENT_ARGS`` that are indexed);
 - ``data``: ``abi_serialise(EVENT_NON_INDEXED_ARGS)`` (``EVENT_NON_INDEXED_ARGS`` is the series of ``EVENT_ARGS`` that are not indexed, ``abi_serialise`` is the ABI serialisation function used for returning a series of typed values from a function, as described above).
 
-For all fixed-length Solidity types, the ``EVENT_INDEXED_ARGS`` array contains the 32-byte encoded value directly. However, for *types of dynamic length*, which include ``string``, ``bytes``, and arrays, ``EVENT_INDEXED_ARGS`` will contain the *Keccak hash* of the packed encoded value (see :ref:`abi_packed_mode`), rather than the encoded value directly. This allows applications to efficiently query for values of dynamic-length types (by setting the hash of the encoded value as the topic), but leaves applications unable to decode indexed values they have not queried for. For dynamic-length types, application developers face a trade-off between fast search for predetermined values (if the argument is indexed) and legibility of arbitrary values (which requires that the arguments not be indexed). Developers may overcome this tradeoff and achieve both efficient search and arbitrary legibility by defining events with two arguments — one indexed, one not — intended to hold the same value.
+For all fixed-length Solidity types, the ``EVENT_INDEXED_ARGS`` array contains the 32-byte encoded value directly. However, for *types of dynamic length*, which include ``string``, ``bytes``, and arrays, ``EVENT_INDEXED_ARGS`` will contain the *Keccak hash* of the packed encoded value, rather than the encoded value directly. This allows applications to efficiently query for values of dynamic-length types (by setting the hash of the encoded value as the topic), but leaves applications unable to decode indexed values they have not queried for. For dynamic-length types, application developers face a trade-off between fast search for predetermined values (if the argument is indexed) and legibility of arbitrary values (which requires that the arguments not be indexed). Developers may overcome this tradeoff and achieve both efficient search and arbitrary legibility by defining events with two arguments — one indexed, one not — intended to hold the same value.
 
-## Acknowledgement
+## Acknowledgements
 
 This specification has its origin in the [Ethereum Wiki: Ethereum Contract ABI](https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI). Since June 2017 it was maintained in the [Solidity repository](https://github.com/ethereum/solidity/blob/develop/docs/abi-spec.rst).
 
